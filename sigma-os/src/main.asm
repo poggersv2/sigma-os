@@ -38,17 +38,53 @@ main:
 
     ; setup stack
     mov ss, ax
-    mov sp, 0x7C00   ; stack grows downwards from we're loading memory
+    mov sp, 0x7C00   ; stack grows downwards from loading memory
 
-    mov si, msg_hello
+    ; Print the hello world message once before starting the loop
+    mov si, start_msg
     call puts
 
-    hlt
+.input_loop:
+    ; Read keypress
+    mov ah, 0x00    ; BIOS keystroke function
+    int 0x16        ; Blocks until keypress. Character is stored in AL
+
+    cmp al, 0x0D ; check if enter is pressed
+    je .handle_enter
+
+    cmp al, 0x08
+    je .handle_backspace
+
+    ; If regular key
+    ; Echo key back to screen
+    mov ah, 0x0e    ; BIOS teletype function
+    mov bh, 0       ; Page number
+    int 0x10        ; Print character in AL
+
+    jmp .input_loop ; Repeat forever
+
+.handle_enter:
+    mov ah, 0x0e
+    mov al, 0x0D    ; Carriage Return
+    int 0x10
+    mov al, 0x0A    ; Line Feed
+    int 0x10
+    jmp .input_loop
+
+.handle_backspace:
+    mov ah, 0x0e
+    mov al, 0x08    ; Move cursor back
+    int 0x10
+    mov al, ' '     ; Print a blank space to erase the character
+    int 0x10
+    mov al, 0x08    ; Move cursor back again
+    int 0x10
+    jmp .input_loop
 
 .halt:
     jmp .halt
 
-msg_hello: db 'hello world!', ENDL, 0
+start_msg: db 'welcome to sigmaOS', ENDL, 0
 
 times 510-($-$$) db 0
 dw 0AA55h
